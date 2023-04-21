@@ -1,48 +1,35 @@
+@Library("podTemplates") _
 pipeline {
+  parameters { booleanParam(name: 'FORCE_PUSH', defaultValue: false, description: 'Will force the publishing of the packages to the registry & repository') }
+  environment {
+    NAME = 'kickstart'
+    REPOSITORY = 'git@github.com:nvanlaerebeke/container-kickstart.git'
+    REPOSITORY_CREDENTIAL_ID = 'adfe5c5e-1b1c-4ecb-9b00-e08fe30f9c8b'
+    REGISTRY = "harbor.crazyzone.be/crazyzone"
+    REGISTRY_HELM = "harbor.crazyzone.be/crazyzone-helm"
+    REGISTRY_SECRET_FILE = credentials('b60285fd-4580-4cba-8633-4c802ab2360c')
+    REGISTRY_SECRET_FILE_HELM = credentials('8fec678f-91a4-4047-ab17-3c83d3651cba') 
+  } 
   agent {
     kubernetes {
-      yaml '''
-kind: Pod
-metadata:
-  name: kaniko
-spec:
-  volumes:
-    - name: kaniko-cache
-      nfs: 
-        server: nas.crazyzone.be 
-        path: /volume1/docker-storage/kaniko/cache
-  containers:
-  - name: kaniko
-    image: registry.crazyzone.be/kaniko:20210317
-    imagePullPolicy: Always
-    tty: true
-    command:
-    - sleep
-    - infinity
-    volumeMounts:
-    - name: kaniko-cache
-      mountPath: /cache   
-'''
+      yaml getPodTemplate("buildkit_with_helm")
     }
-
   }
   stages {
     stage('build') {
-      steps {  
-        container(name: 'kaniko', shell: '/busybox/sh') {
-          sh '''#!/busybox/sh 
-REPO=registry.crazyzone.be
-NAME=kickstart
-VERSION=`cat VERSION`
-
-if [[ $GIT_LOCAL_BRANCH == "main" || $GIT_LOCAL_BRANCH == "master" ]];
-then
-  TAG=latest
-else
-  TAG=$GIT_LOCAL_BRANCH
-fi
-/kaniko/executor --dockerfile Dockerfile --context `pwd`/ --verbosity debug --destination $REPO/$NAME:$TAG --destination $REPO/$NAME:$VERSION --cache=true --cache-repo $REPO/cache
-            '''
+      when { anyOf {
+        branch "master";
+        branch "main"
+        branch "stable";
+        branch "dev";
+        expression{params.FORCE_PUSH == true }
+      } }
+      steps {
+        container(name: "buildkit", shell: '/bin/sh') {
+          checkoutAndBuild(env.REPOSITORY, env.REPOSITORY_CREDENTIAL_ID, env.NAME, env.REGISTRY, env.BRANCH_NAME, env.REGISTRY_SECRET_FILE)
+        }
+        container(name: "helm", shell: '/bin/sh') {
+          sh getHelmBuildScript(env.NAME, env.REGISTRY_HELM, REGISTRY_SECRET_FILE_HELM)
         }
       }
     }

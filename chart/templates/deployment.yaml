@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: {{ $.Values.name }}
+  name:  {{ $.Values.name }}
+spec:
+  replicas:  {{ $.Values.resources.replicaCount }}
+  selector:
+    matchLabels:
+      app:  {{ $.Values.name }}
+  template:
+    metadata:
+      labels:
+        app:  {{ $.Values.name }}
+    spec:
+      containers:
+      - image: "{{ .Values.global.registry }}/{{ .Values.global.image }}:{{ .Values.global.tag }}"
+        name:  {{ $.Values.name }}
+        ports:
+        - containerPort: 3000
+          name: {{ $.Values.name }}
+        readinessProbe:
+          httpGet:
+            scheme: HTTP
+            path: /
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 5
+{{- if $.Values.global.existingRegisrySecret }}          
+      imagePullSecrets:
+        - name: {{ $.Values.global.existingRegisrySecret }}
+{{ end }}

@@ -1,0 +1,15 @@
+name: kickstart
+global:
+  registry: harbor.crazyzone.be/crazyzone
+  image: kickstart
+  tag: latest
+  #Use an existing secret for your registry
+  #existingRegisrySecret: ""
+resources:
+  replicaCount: 1
+hostnames:
+  - kickstart.crazyzone.be
+ingress:
+  enabled: true
+  tls:
+    existingSecret: secret-tls
