@@ -18,13 +18,13 @@ spec:
       - image: "{{ .Values.global.registry }}/{{ .Values.global.image }}:{{ .Values.global.tag }}"
         name:  {{ $.Values.name }}
         ports:
-        - containerPort: 3000
+        - containerPort: 80
           name: {{ $.Values.name }}
         readinessProbe:
           httpGet:
             scheme: HTTP
             path: /
-            port: 3000
+            port: 80
           initialDelaySeconds: 10
           periodSeconds: 5
 {{- if $.Values.global.existingRegisrySecret }}          
