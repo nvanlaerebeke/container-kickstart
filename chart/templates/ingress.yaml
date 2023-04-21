@@ -23,5 +23,5 @@ spec:
               service:
                 name: {{ $.Values.name }}
                 port:
-                  number: 3000
+                  number: 80
     {{- end }}
